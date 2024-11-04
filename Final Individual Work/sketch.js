@@ -548,6 +548,8 @@ class PatternManager {
 
 // Global variables used to manage patterns
 let patternManager;
+let isRotating = false;
+let rotationAngle = 0;
 
 // The setup function initializes the canvas and the PatternManager instance
 function setup() {
@@ -571,26 +573,115 @@ function windowResized() {
 }
 
 
+// Global variables used to manage patterns
+let patternManager1;
+let isAnimating = true;
+
+// The setup function initializes the canvas and the PatternManager instance
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  patternManager = new PatternManager();
+  patternManager.createPatterns();
+}
+
 // The draw function, called at each frame
-// is responsible for drawing the pattern
 function draw() {
   background(232,198,198,255);
   patternManager.draw();
 }
 
 // Add keyboard event handler
+
+// Adding a rotation effect
+function draw() {
+ background(232,198,198,255);
+ 
+ // If rotating, increase the rotation angle
+ if (isRotating) {
+   rotationAngle += 0.03; // Controlling the rotation speed
+ }
+ 
+ 
+ patternManager.patterns.forEach(pattern => {
+   push(); // Save the current transformation state
+   translate(pattern.x, pattern.y); 
+   rotate(rotationAngle); 
+   translate(-pattern.x, -pattern.y); // Move back to original position
+   pattern.draw(); // Draw the pattern
+   pop(); // Restore Transformation State
+ });
+}
+
+// Keyboard event handling
 function keyPressed() {
-  // Check if the 's' key is pressed
-  if (key === 's' || key === 'S') {
-    console.log("Refreshing patterns...");
-    // Regenerate all patterns with new positions
-    patternManager.createPatterns();
+ // Refresh patterns
+ if (key === 's' || key === 'S') {
+   console.log("Refreshing patterns...");
+   patternManager.createPatterns();
+ } 
+
+
+ // Add new pattern
+ else if (key === 'a' || key === 'A') {
+  // Try multiple times to find the location
+  let attempts = 0;
+  const maxAttempts = 100;
+  
+  while (attempts < maxAttempts) {
+    const { x, y, size } = patternManager.getRandomPosition();
+    if (!patternManager.checkOverlap(x, y, size)) {
+      const PatternClass = random(patternManager.patternClasses);
+      const scale = size / 350;
+      const pattern = new PatternClass(x, y, scale);
+      pattern.size = size;
+      patternManager.patterns.push(pattern);
+      console.log("Added new pattern");
+      break;  // Exit the loop after successful addition
+    }
+    attempts++;
+    
+    // If you can't find the location after multiple attempts, reduce the pattern size and try again.
+    if (attempts === maxAttempts) {
+      const { x, y } = patternManager.getRandomPosition();
+      const PatternClass = random(patternManager.patternClasses);
+      // Use a smaller size
+      const size = min(windowWidth, windowHeight) * 0.1; //Reduce to original size
+      const scale = size / 350;
+      const pattern = new PatternClass(x, y, scale);
+      pattern.size = size;
+      patternManager.patterns.push(pattern);
+      console.log("Added smaller pattern due to space constraints");
+    }
   }
 }
+
+ // Remove random pattern
+ else if (key === 'd' || key === 'D') {
+   if (patternManager.patterns.length > 1) {
+     const randomIndex = floor(random(patternManager.patterns.length));
+     patternManager.patterns.splice(randomIndex, 1);
+     console.log("Removed random pattern");
+   }
+ }
+ // Start rotation
+ else if (key === ' ') {
+   isRotating = true;
+   console.log("Rotation started");
+ }
+}
+
+// Add keyboard release event handling
+function keyReleased() {
+ // Stop rotation when space is released
+ if (key === ' ') {
+   isRotating = false;
+   console.log("Rotation stopped");
+ }
+}
+
 
 // Window size change processing
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-  // Regenerates the pattern to fit the new canvas size
   patternManager.createPatterns();
 }
