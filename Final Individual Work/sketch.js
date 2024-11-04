@@ -685,3 +685,88 @@ function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
   patternManager.createPatterns();
 }
+
+// Add global variables to track drag state
+let isDragging = false;
+let draggedPattern = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+// Add mouse down event handling
+function mousePressed() {
+ // Only handle left clicks
+ if (mouseButton === LEFT) {
+   // Check each pattern from top to bottom (this gives priority to patterns on the upper layers)
+   for (let pattern of patternManager.patterns) {
+     const d = dist(mouseX, mouseY, pattern.x, pattern.y);
+     if (d < pattern.size / 2) {
+       isDragging = true;
+       draggedPattern = pattern;
+       // Record the offset between the mouse and the center of the pattern
+       dragOffsetX = mouseX - pattern.x;
+       dragOffsetY = mouseY - pattern.y;
+       break;
+     }
+   }
+ }
+}
+
+// Add mouse drag event handling
+function mouseDragged() {
+ if (isDragging && draggedPattern) {
+   // Update the pattern position, taking into account the initial offset
+   draggedPattern.x = mouseX - dragOffsetX;
+   draggedPattern.y = mouseY - dragOffsetY;
+   
+   // Prevent the pattern from being dragged off the canvas
+   const margin = draggedPattern.size / 2;
+   draggedPattern.x = constrain(draggedPattern.x, margin, windowWidth - margin);
+   draggedPattern.y = constrain(draggedPattern.y, margin, windowHeight - margin);
+ }
+}
+
+// Add mouse release event handling
+function mouseReleased() {
+ isDragging = false;
+ draggedPattern = null;
+}
+
+// Modify the draw function to support visual feedback while dragging
+function draw() {
+ background(232,198,198,255);
+ 
+ if (isRotating) {
+   rotationAngle += 0.02;
+ }
+ 
+ // Make sure the dragged pattern is always displayed on the top layer
+ let patterns = [...patternManager.patterns];
+ if (isDragging && draggedPattern) {
+   patterns = patterns.filter(p => p !== draggedPattern);
+   patterns.push(draggedPattern);
+ }
+ 
+ // Draw all patterns
+ patterns.forEach(pattern => {
+   push();
+   translate(pattern.x, pattern.y);
+   if (isRotating) {
+     rotate(rotationAngle);
+   }
+   translate(-pattern.x, -pattern.y);
+   
+   // Add visual hint if the pattern is being dragged
+   if (pattern === draggedPattern) {
+     push();
+     // Draw a light border to indicate the selected state
+     noFill();
+     stroke(255, 255, 255, 100);
+     strokeWeight(3);
+     circle(pattern.x, pattern.y, pattern.size + 10);
+     pop();
+   }
+   
+   pattern.draw();
+   pop();
+ });
+}
